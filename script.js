@@ -1,5 +1,9 @@
 // Code snippets storage
 let codeSnippets = [];
+let githubToken = '';
+let gistId = '';
+let isSyncing = false;
+let autoSyncEnabled = true;
 
 // DOM elements
 const searchInput = document.getElementById('searchInput');
@@ -7,9 +11,18 @@ const titleInput = document.getElementById('titleInput');
 const codeInput = document.getElementById('codeInput');
 const addBtn = document.getElementById('addBtn');
 const codeList = document.getElementById('codeList');
+const setupBtn = document.getElementById('setupBtn');
+const syncBtn = document.getElementById('syncBtn');
+const setupModal = document.getElementById('setupModal');
+const closeModal = document.getElementById('closeModal');
+const tokenInput = document.getElementById('tokenInput');
+const saveTokenBtn = document.getElementById('saveTokenBtn');
+const statusIndicator = document.getElementById('statusIndicator');
+const statusText = document.getElementById('statusText');
 
-// Load saved snippets from localStorage
-loadFromLocalStorage();
+// Load GitHub config and data
+loadGitHubConfig();
+updateSyncUI();
 
 // Add event listener for Add button
 addBtn.addEventListener('click', addCode);
@@ -31,6 +44,25 @@ codeInput.addEventListener('keydown', (e) => {
         addCode();
     }
 });
+
+// GitHub Sync Event Listeners
+setupBtn.addEventListener('click', () => {
+    setupModal.style.display = 'block';
+});
+
+closeModal.addEventListener('click', () => {
+    setupModal.style.display = 'none';
+});
+
+window.addEventListener('click', (e) => {
+    if (e.target === setupModal) {
+        setupModal.style.display = 'none';
+    }
+});
+
+saveTokenBtn.addEventListener('click', saveGitHubToken);
+
+syncBtn.addEventListener('click', syncWithGitHub);
 
 // Add code function
 function addCode() {
@@ -61,15 +93,27 @@ function addCode() {
     codeInput.value = '';
     titleInput.focus();
     
-    saveToLocalStorage();
     renderCodeList();
+    
+    // Auto-sync to GitHub after adding
+    if (githubToken && gistId && autoSyncEnabled) {
+        autoSyncToGitHub();
+    }
 }
 
 // Delete code function
 function deleteCode(id) {
+    if (!confirm('Are you sure you want to delete this snippet?')) {
+        return;
+    }
+    
     codeSnippets = codeSnippets.filter(snippet => snippet.id !== id);
-    saveToLocalStorage();
     renderCodeList();
+    
+    // Auto-sync to GitHub after deleting
+    if (githubToken && gistId && autoSyncEnabled) {
+        autoSyncToGitHub();
+    }
 }
 
 // Copy to clipboard function
@@ -160,21 +204,276 @@ function escapeForJS(text) {
     return text.replace(/`/g, '\\`').replace(/\$/g, '\\$');
 }
 
-// Save to localStorage
-function saveToLocalStorage() {
-    localStorage.setItem('codeSnippets', JSON.stringify(codeSnippets));
-}
+// Initial render
+renderCodeList();
 
-// Load from localStorage
-function loadFromLocalStorage() {
-    const saved = localStorage.getItem('codeSnippets');
-    if (saved) {
-        codeSnippets = JSON.parse(saved);
-        renderCodeList();
-    } else {
-        renderCodeList();
+// ===== GitHub Gist Functions =====
+
+function loadGitHubConfig() {
+    try {
+        githubToken = localStorage.getItem('githubToken') || '';
+        gistId = localStorage.getItem('gistId') || '';
+    } catch (error) {
+        console.error('Error loading GitHub config:', error);
     }
 }
 
-// Initial render
-renderCodeList();
+async function saveGitHubToken() {
+    const token = tokenInput.value.trim();
+    
+    if (!token) {
+        alert('Please enter a GitHub token!');
+        return;
+    }
+    
+    // Verify token by making a test API call
+    statusText.textContent = 'Verifying token...';
+    
+    try {
+        const response = await fetch('https://api.github.com/user', {
+            headers: {
+                'Authorization': `token ${token}`,
+                'Accept': 'application/vnd.github.v3+json'
+            }
+        });
+        
+        if (!response.ok) {
+            alert('❌ Invalid token! Please check and try again.');
+            statusText.textContent = 'Token verification failed';
+            return;
+        }
+        
+        githubToken = token;
+        localStorage.setItem('githubToken', githubToken);
+        tokenInput.value = '';
+        setupModal.style.display = 'none';
+        
+        updateSyncUI();
+        
+        // Try to load existing data or create new gist
+        await loadOrCreateGist();
+        
+    } catch (error) {
+        console.error('Token verification error:', error);
+        alert('❌ Failed to verify token. Please check your internet connection.');
+        statusText.textContent = 'Connection failed';
+    }
+}
+
+function updateSyncUI() {
+    if (githubToken) {
+        setupBtn.style.display = 'none';
+        syncBtn.style.display = 'inline-block';
+        statusIndicator.className = 'status-indicator connected';
+        statusText.textContent = gistId ? `Connected to GitHub (${codeSnippets.length} snippets)` : 'Connected - Setting up...';
+    } else {
+        setupBtn.style.display = 'inline-block';
+        syncBtn.style.display = 'none';
+        statusIndicator.className = 'status-indicator disconnected';
+        statusText.textContent = '⚠️ Setup GitHub to save your data';
+    }
+}
+
+async function syncWithGitHub() {
+    if (!githubToken) {
+        alert('⚠️ Please setup GitHub token first to save your data!');
+        setupModal.style.display = 'block';
+        return;
+    }
+    
+    if (isSyncing) {
+        return; // Silent skip if already syncing
+    }
+    
+    isSyncing = true;
+    statusIndicator.className = 'status-indicator syncing';
+    statusText.textContent = 'Syncing...';
+    syncBtn.disabled = true;
+    
+    try {
+        if (gistId) {
+            // Update existing gist
+            await updateGist();
+        } else {
+            // Create new gist
+            await createGist();
+        }
+        
+        statusIndicator.className = 'status-indicator connected';
+        const time = new Date().toLocaleTimeString();
+        statusText.textContent = `Connected (${codeSnippets.length} snippets) - Last synced: ${time}`;
+        console.log('✅ Synced successfully');
+    } catch (error) {
+        console.error('Sync error:', error);
+        statusIndicator.className = 'status-indicator disconnected';
+        statusText.textContent = 'Sync failed - Check connection';
+        alert('❌ Sync failed: ' + error.message + '\n\nPlease check your internet connection and token.');
+    } finally {
+        isSyncing = false;
+        syncBtn.disabled = false;
+    }
+}
+
+// Auto-sync function (silent, no alerts)
+async function autoSyncToGitHub() {
+    if (!githubToken || !gistId || isSyncing) {
+        return;
+    }
+    
+    isSyncing = true;
+    
+    try {
+        await updateGist();
+        console.log('✅ Auto-synced to GitHub');
+        updateSyncUI();
+    } catch (error) {
+        console.error('Auto-sync error:', error);
+    } finally {
+        isSyncing = false;
+    }
+}
+
+async function createGist() {
+    const response = await fetch('https://api.github.com/gists', {
+        method: 'POST',
+        headers: {
+            'Authorization': `token ${githubToken}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/vnd.github.v3+json'
+        },
+        body: JSON.stringify({
+            description: 'Code Manager - My Code Snippets',
+            public: false,
+            files: {
+                'code-snippets.json': {
+                    content: JSON.stringify(codeSnippets, null, 2)
+                }
+            }
+        })
+    });
+    
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to create gist');
+    }
+    
+    const data = await response.json();
+    gistId = data.id;
+    localStorage.setItem('gistId', gistId);
+    console.log('Gist created:', gistId);
+}
+
+async function updateGist() {
+    const response = await fetch(`https://api.github.com/gists/${gistId}`, {
+        method: 'PATCH',
+        headers: {
+            'Authorization': `token ${githubToken}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/vnd.github.v3+json'
+        },
+        body: JSON.stringify({
+            files: {
+                'code-snippets.json': {
+                    content: JSON.stringify(codeSnippets, null, 2)
+                }
+            }
+        })
+    });
+    
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to update gist');
+    }
+    
+    console.log('Gist updated:', gistId);
+}
+
+async function loadFromGist() {
+    if (!githubToken || !gistId) return false;
+    
+    try {
+        statusText.textContent = 'Loading from GitHub...';
+        
+        const response = await fetch(`https://api.github.com/gists/${gistId}`, {
+            headers: {
+                'Authorization': `token ${githubToken}`,
+                'Accept': 'application/vnd.github.v3+json'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to load from gist');
+        }
+        
+        const data = await response.json();
+        const content = data.files['code-snippets.json'].content;
+        const cloudSnippets = JSON.parse(content);
+        
+        codeSnippets = cloudSnippets;
+        renderCodeList();
+        updateSyncUI();
+        
+        console.log('✅ Loaded from GitHub:', cloudSnippets.length, 'snippets');
+        return true;
+    } catch (error) {
+        console.error('Error loading from gist:', error);
+        return false;
+    }
+}
+
+async function loadOrCreateGist() {
+    statusText.textContent = 'Checking for existing data...';
+    
+    // Try to find existing gist
+    try {
+        const response = await fetch('https://api.github.com/gists', {
+            headers: {
+                'Authorization': `token ${githubToken}`,
+                'Accept': 'application/vnd.github.v3+json'
+            }
+        });
+        
+        if (response.ok) {
+            const gists = await response.json();
+            const existingGist = gists.find(g => 
+                g.description === 'Code Manager - My Code Snippets' && 
+                g.files['code-snippets.json']
+            );
+            
+            if (existingGist) {
+                gistId = existingGist.id;
+                localStorage.setItem('gistId', gistId);
+                await loadFromGist();
+                statusText.textContent = `✅ Connected (${codeSnippets.length} snippets loaded)`;
+                return;
+            }
+        }
+    } catch (error) {
+        console.error('Error checking existing gists:', error);
+    }
+    
+    // Create new gist if none exists
+    try {
+        await createGist();
+        statusText.textContent = '✅ Connected - Ready to save!';
+    } catch (error) {
+        console.error('Error creating gist:', error);
+        statusText.textContent = '❌ Failed to setup - Try again';
+    }
+}
+
+// Load from GitHub on startup if configured
+if (githubToken && gistId) {
+    loadFromGist().then(success => {
+        if (success) {
+            console.log('✅ Data loaded from GitHub');
+        } else {
+            console.log('⚠️ Using empty state');
+            renderCodeList();
+        }
+    });
+} else if (githubToken && !gistId) {
+    loadOrCreateGist();
+} else {
+    renderCodeList();
+}
