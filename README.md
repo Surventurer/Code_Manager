@@ -32,7 +32,7 @@ A simple, elegant web application to manage your code snippets. Add, search, del
 Simply clone this repository and open `index.html` in your browser:
 
 ```bash
-git clone https://github.com/yourusername/code-manager.git
+git clone https://github.com/Surventurer/Code_Manager.git
 cd Code_Manager
 open index.html
 ```
