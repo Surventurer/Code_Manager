@@ -6,6 +6,10 @@ let isSyncing = false;
 let autoSyncEnabled = true;
 let isNetlifyDeployment = false;
 
+// Hide content feature variables
+let contentProtectionPassword = '';
+let unlockedSnippets = new Set(); // Track which snippets are unlocked in this session
+
 // DOM elements
 const searchInput = document.getElementById('searchInput');
 const passwordInput = document.getElementById('passwordInput');
@@ -13,6 +17,7 @@ const titleInput = document.getElementById('titleInput');
 const codeInput = document.getElementById('codeInput');
 const addBtn = document.getElementById('addBtn');
 const codeList = document.getElementById('codeList');
+const hideContentToggle = document.getElementById('hideContentToggle');
 
 // Initialize app
 initializeApp();
@@ -51,6 +56,7 @@ function addCode() {
     const password = passwordInput.value.trim();
     const title = titleInput.value.trim();
     const code = codeInput.value.trim();
+    const hideContent = hideContentToggle.checked;
     
     if (password === '') {
         alert('Please enter a password!');
@@ -70,18 +76,40 @@ function addCode() {
         return;
     }
     
+    // If hide content is checked, set up protection password if not exists
+    if (hideContent && !contentProtectionPassword) {
+        const protectionPassword = prompt('Set a protection password for hiding content:');
+        
+        if (!protectionPassword) {
+            alert('Protection password is required to hide content!');
+            return;
+        }
+        
+        const confirmPassword = prompt('Confirm your protection password:');
+        
+        if (protectionPassword !== confirmPassword) {
+            alert('Passwords do not match! Please try again.');
+            return;
+        }
+        
+        contentProtectionPassword = protectionPassword;
+        localStorage.setItem('contentProtectionPassword', contentProtectionPassword);
+    }
+    
     const snippet = {
         id: Date.now(),
         title: title,
         code: code,
         password: password,
-        timestamp: new Date().toLocaleString()
+        timestamp: new Date().toLocaleString(),
+        hidden: hideContent
     };
     
     codeSnippets.unshift(snippet);
     passwordInput.value = '';
     titleInput.value = '';
     codeInput.value = '';
+    hideContentToggle.checked = false;
     passwordInput.focus();
     
     renderCodeList();
@@ -122,7 +150,25 @@ function deleteCode(id) {
 }
 
 // Copy to clipboard function
-function copyToClipboard(code, button) {
+function copyToClipboard(id, code, button) {
+    const snippet = codeSnippets.find(s => s.id === id);
+    
+    // Check if snippet is hidden and not unlocked
+    if (snippet && snippet.hidden && !unlockedSnippets.has(id)) {
+        const enteredPassword = prompt('Enter protection password to copy:');
+        
+        if (enteredPassword === null) {
+            return; // User cancelled
+        }
+        
+        if (enteredPassword !== contentProtectionPassword) {
+            alert('Incorrect password! Cannot copy content.');
+            return;
+        }
+        
+        // Password correct, proceed with copying (but don't unlock the view)
+    }
+    
     navigator.clipboard.writeText(code).then(() => {
         const originalText = button.textContent;
         button.textContent = '✓ Copied!';
@@ -167,13 +213,36 @@ function renderCodeList() {
             ? escapeHtml(snippet.title)
             : highlightText(escapeHtml(snippet.title), searchQuery);
         
+        // Determine if content should be protected
+        const isProtected = snippet.hidden && !unlockedSnippets.has(snippet.id);
+        const contentClass = isProtected ? 'code-content protected' : 'code-content';
+        
+        // Create eye button for hidden content (both locked and unlocked)
+        let eyeButton = '';
+        if (snippet.hidden) {
+            if (isProtected) {
+                // Locked - show closed eye
+                eyeButton = `<button class="eye-unlock-btn" onclick="unlockContent(${snippet.id})">
+                    <span class="eye-text">Unlock</span>
+                </button>`;
+            } else {
+                // Unlocked - show open eye to hide again
+                eyeButton = `<button class="eye-unlock-btn" onclick="lockContent(${snippet.id})">
+                    <span class="eye-text">Hide</span>
+                </button>`;
+            }
+        }
+        
         return `
             <div class="code-item">
                 <div class="code-title">${highlightedTitle}</div>
                 <div class="timestamp">Added: ${snippet.timestamp}</div>
-                <div class="code-content">${escapeHtml(snippet.code)}</div>
+                <div class="code-content-wrapper">
+                    ${eyeButton}
+                    <div class="${contentClass}">${escapeHtml(snippet.code)}</div>
+                </div>
                 <div class="code-actions">
-                    <button class="btn btn-copy" onclick="copyToClipboard(\`${escapeForJS(snippet.code)}\`, this)">
+                    <button class="btn btn-copy" onclick="copyToClipboard(${snippet.id}, \`${escapeForJS(snippet.code)}\`, this)">
                         📋 Copy to Clipboard
                     </button>
                     <button class="btn btn-delete" onclick="deleteCode(${snippet.id})">
@@ -209,7 +278,44 @@ function escapeForJS(text) {
     return text.replace(/`/g, '\\`').replace(/\$/g, '\\$');
 }
 
+// ===== Hide Content Feature =====
+
+// Unlock content (called when clicking on protected content)
+function unlockContent(id) {
+    const enteredPassword = prompt('Enter protection password to view content:');
+    
+    if (enteredPassword === null) {
+        return; // User cancelled
+    }
+    
+    if (enteredPassword !== contentProtectionPassword) {
+        alert('Incorrect password! Content remains hidden.');
+        return;
+    }
+    
+    // Unlock this snippet for this session
+    unlockedSnippets.add(id);
+    renderCodeList();
+}
+
+// Lock content (hide again)
+function lockContent(id) {
+    // Remove from unlocked set to hide it again
+    unlockedSnippets.delete(id);
+    renderCodeList();
+}
+
+// Load hide content settings on startup
+function loadHideContentSettings() {
+    const savedPassword = localStorage.getItem('contentProtectionPassword');
+    
+    if (savedPassword) {
+        contentProtectionPassword = savedPassword;
+    }
+}
+
 // Initial render
+loadHideContentSettings();
 renderCodeList();
 
 // ===== GitHub Gist Functions =====
