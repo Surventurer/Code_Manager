@@ -224,8 +224,6 @@ async function initializeApp() {
     } else {
         loadGitHubConfig();
     }
-    
-    updateSyncUI();
 }
 
 // Load token from Netlify function
