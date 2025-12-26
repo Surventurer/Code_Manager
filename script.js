@@ -343,16 +343,14 @@ renderCodeList();
 
 // ===== Database Storage Functions =====
 
+// ===== Database Storage Functions =====
+
 let isSaving = false;
-let isNetlifyEnvironment = false;
 
 // Check if running on Netlify
-function checkEnvironment() {
-    // Check if we're on Netlify by hostname
+function isNetlifyEnvironment() {
     const hostname = window.location.hostname;
-    const isNetlify = hostname.includes('netlify.app') || hostname.includes('.netlify.app');
-    isNetlifyEnvironment = isNetlify;
-    return isNetlify;
+    return hostname.includes('netlify.app') || hostname.includes('.netlify.app');
 }
 
 // Save to storage (database.json on Netlify, localStorage locally)
@@ -362,7 +360,7 @@ async function saveToDatabaseJSON() {
     isSaving = true;
     
     try {
-        if (isNetlifyEnvironment) {
+        if (isNetlifyEnvironment()) {
             // On Netlify: use serverless function to save to database.json
             const response = await fetch('/.netlify/functions/save-data', {
                 method: 'POST',
@@ -399,7 +397,7 @@ async function saveToDatabaseJSON() {
 // Load from storage (database.json on Netlify, localStorage locally)
 async function loadFromDatabaseJSON() {
     try {
-        if (isNetlifyEnvironment) {
+        if (isNetlifyEnvironment()) {
             // On Netlify: load from database.json via serverless function
             const response = await fetch('/.netlify/functions/get-data');
             
@@ -436,11 +434,10 @@ async function loadFromDatabaseJSON() {
 
 // Initialize the app
 async function initializeApp() {
-    checkEnvironment();
     await loadFromDatabaseJSON();
     renderCodeList();
     
-    if (isNetlifyEnvironment) {
+    if (isNetlifyEnvironment()) {
         console.log('💾 Storage: database.json (Netlify)');
     } else {
         console.log('💾 Storage: localStorage (Local mode - data will sync to database.json when deployed to Netlify)');
