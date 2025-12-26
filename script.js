@@ -373,19 +373,15 @@ async function saveToDatabaseJSON() {
             if (!response.ok) {
                 throw new Error('Failed to save data');
             }
-            
-            console.log('✅ Saved to database.json');
         } else {
             // Locally: use localStorage
             localStorage.setItem('codeSnippets', JSON.stringify(codeSnippets));
-            console.log('✅ Saved to localStorage (local mode)');
         }
     } catch (error) {
         console.error('Error saving:', error);
         // Fallback to localStorage if Netlify function fails
         try {
             localStorage.setItem('codeSnippets', JSON.stringify(codeSnippets));
-            console.log('⚠️ Fallback: Saved to localStorage');
         } catch (e) {
             alert('⚠️ Failed to save data. Please try again.');
         }
@@ -406,7 +402,6 @@ async function loadFromDatabaseJSON() {
                 
                 if (Array.isArray(data) && data.length > 0) {
                     codeSnippets = data;
-                    console.log(`✅ Loaded ${data.length} snippets from database.json`);
                     return;
                 }
             }
@@ -416,7 +411,6 @@ async function loadFromDatabaseJSON() {
         const stored = localStorage.getItem('codeSnippets');
         if (stored) {
             codeSnippets = JSON.parse(stored);
-            console.log(`✅ Loaded ${codeSnippets.length} snippets from localStorage`);
         }
     } catch (error) {
         console.error('Error loading:', error);
@@ -436,10 +430,4 @@ async function loadFromDatabaseJSON() {
 async function initializeApp() {
     await loadFromDatabaseJSON();
     renderCodeList();
-    
-    if (isNetlifyEnvironment()) {
-        console.log('💾 Storage: database.json (Netlify)');
-    } else {
-        console.log('💾 Storage: localStorage (Local mode - data will sync to database.json when deployed to Netlify)');
-    }
 }
