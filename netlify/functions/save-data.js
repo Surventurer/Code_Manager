@@ -1,5 +1,4 @@
-const fs = require('fs');
-const path = require('path');
+const { saveAllSnippets } = require('./db');
 
 exports.handler = async function(event, context) {
   const headers = {
@@ -32,8 +31,7 @@ exports.handler = async function(event, context) {
       };
     }
 
-    const dbPath = path.join(__dirname, '../../database.json');
-    fs.writeFileSync(dbPath, JSON.stringify(data, null, 2), 'utf8');
+    await saveAllSnippets(data);
     
     return {
       statusCode: 200,
@@ -45,7 +43,7 @@ exports.handler = async function(event, context) {
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ error: 'Failed to save database' })
+      body: JSON.stringify({ error: 'Failed to save database', details: error.message })
     };
   }
 };

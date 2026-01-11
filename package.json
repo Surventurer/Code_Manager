@@ -1,7 +1,7 @@
 {
   "name": "code-manager",
   "version": "1.0.0",
-  "description": "Code snippet manager with GitHub Gists storage",
+  "description": "Code snippet manager with PostgreSQL storage",
   "main": "index.html",
   "scripts": {
     "start": "echo 'Open index.html in your browser'",
@@ -14,9 +14,12 @@
   "keywords": [
     "code-manager",
     "snippets",
-    "github-gists",
+    "postgresql",
     "netlify"
   ],
   "author": "Surventurer",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "pg": "^8.11.3"
+  }
 }

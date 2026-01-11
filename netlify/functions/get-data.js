@@ -1,5 +1,4 @@
-const fs = require('fs');
-const path = require('path');
+const { getAllSnippets } = require('./db');
 
 exports.handler = async function(event, context) {
   const headers = {
@@ -14,29 +13,19 @@ exports.handler = async function(event, context) {
   }
 
   try {
-    const dbPath = path.join(__dirname, '../../database.json');
-    
-    if (!fs.existsSync(dbPath)) {
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify([])
-      };
-    }
-
-    const data = fs.readFileSync(dbPath, 'utf8');
+    const snippets = await getAllSnippets();
     
     return {
       statusCode: 200,
       headers,
-      body: data
+      body: JSON.stringify(snippets)
     };
   } catch (error) {
     console.error('Error reading database:', error);
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ error: 'Failed to read database' })
+      body: JSON.stringify({ error: 'Failed to read database', details: error.message })
     };
   }
 };
