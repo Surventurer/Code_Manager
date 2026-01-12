@@ -23,7 +23,6 @@ function encryptContent(text, password) {
         // Convert binary string to base64
         return btoa(encrypted);
     } catch (e) {
-        console.error('Encryption error:', e);
         return null;
     }
 }
@@ -43,7 +42,6 @@ function decryptContent(encryptedText, password) {
         // Convert UTF-8 bytes back to Unicode text
         return decodeURIComponent(decrypted);
     } catch (e) {
-        console.error('Decryption error:', e);
         return null; // Decryption failed
     }
 }
@@ -129,18 +127,14 @@ function clearFileSelection() {
 }
 
 function updateInputVisibility() {
-    console.log('Updating visibility, selectedContentType:', selectedContentType);
-    
     if (selectedContentType === 'text') {
         codeInput.style.display = 'block';
         fileUploadArea.style.display = 'none';
         clearFileSelection();
-        console.log('Showing text area, hiding file upload');
     } else {
         codeInput.style.display = 'none';
         fileUploadArea.style.display = 'block';
         fileInput.accept = selectedContentType === 'image' ? 'image/*' : '.pdf';
-        console.log('Hiding text area, showing file upload');
     }
 }
 
@@ -217,7 +211,6 @@ async function addCode() {
             content = await readFileAsBase64(selectedFile);
         } catch (error) {
             alert('Failed to read file!');
-            console.error(error);
             return;
         }
     }
@@ -264,19 +257,13 @@ function readFileAsBase64(file) {
 
 // Delete code function
 async function deleteCode(id) {
-    console.log('Delete called with ID:', id, 'Type:', typeof id);
-    console.log('All snippet IDs:', codeSnippets.map(s => ({ id: s.id, type: typeof s.id })));
-    
     // Use loose comparison (==) to match both string and number types
     const snippet = codeSnippets.find(s => s.id == id);
     
     if (!snippet) {
-        console.log('Snippet not found. Available IDs:', codeSnippets.map(s => s.id));
         alert('❌ Snippet not found!');
         return;
     }
-    
-    console.log('Found snippet:', snippet.title);
     
     const enteredPassword = prompt('Enter password to delete this snippet:');
     
@@ -293,14 +280,8 @@ async function deleteCode(id) {
         return;
     }
     
-    console.log('Deleting snippet from array...');
-    
     // Remove from local array using loose comparison
-    const beforeLength = codeSnippets.length;
     codeSnippets = codeSnippets.filter(s => s.id != id);
-    const afterLength = codeSnippets.length;
-    
-    console.log('Array length before:', beforeLength, 'after:', afterLength);
     
     // Remove from unlocked cache if present
     unlockedSnippets.delete(id);
@@ -311,9 +292,7 @@ async function deleteCode(id) {
     
     // Save to database
     try {
-        console.log('Saving to database...');
         await saveToDatabaseJSON();
-        console.log('Successfully saved to database');
         
         // Show success feedback briefly
         const tempDiv = document.createElement('div');
@@ -322,7 +301,6 @@ async function deleteCode(id) {
         document.body.appendChild(tempDiv);
         setTimeout(() => tempDiv.remove(), 2000);
     } catch (error) {
-        console.error('Error saving to database:', error);
         alert('⚠️ Error: Snippet removed from display but failed to save to database. Please refresh the page.');
         // Reload from database to restore correct state
         await loadFromDatabaseJSON();
@@ -382,7 +360,6 @@ function copyToClipboard(id, button) {
             button.classList.remove('copied');
         }, 2000);
     }).catch(err => {
-        console.error('Failed to copy:', err);
         alert('Failed to copy to clipboard');
     });
 }
@@ -589,10 +566,6 @@ codeList.addEventListener('click', async function(e) {
     let snippet = codeSnippets.find(s => s.id == idStr || s.id === idNum);
     
     if (action === 'delete') {
-        if (!snippet) {
-            console.error('Cannot find snippet with ID:', idStr, idNum);
-            console.log('Available snippets:', codeSnippets.map(s => ({ id: s.id, type: typeof s.id, title: s.title })));
-        }
         await deleteCode(snippet ? snippet.id : idNum);
     } else if (action === 'copy') {
         if (snippet) {
@@ -727,7 +700,6 @@ async function saveToDatabaseJSON() {
             }
         }
     } catch (error) {
-        console.error('Error saving:', error);
         alert('⚠️ Failed to save data to database. Please try again.');
         throw error;
     } finally {
@@ -749,13 +721,9 @@ async function loadFromDatabaseJSON() {
                     ...snippet,
                     id: typeof snippet.id === 'string' ? parseInt(snippet.id, 10) : snippet.id
                 }));
-                console.log('Loaded snippets from database:', codeSnippets.length);
             }
-        } else {
-            console.error('Failed to load data from database');
         }
     } catch (error) {
-        console.error('Error loading from database:', error);
         alert('⚠️ Failed to load data from database. Please check your connection.');
     }
 }
