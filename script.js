@@ -267,19 +267,19 @@ function renderCodeList() {
         if (snippet.hidden) {
             if (isProtected) {
                 // Locked - show closed eye
-                eyeButton = `<button class="eye-unlock-btn" onclick="unlockContent(${snippet.id})">
+                eyeButton = `<button class="eye-unlock-btn" data-action="unlock" data-id="${snippet.id}">
                     <span class="eye-text">Unlock</span>
                 </button>`;
             } else {
                 // Unlocked - show open eye to hide again
-                eyeButton = `<button class="eye-unlock-btn" onclick="lockContent(${snippet.id})">
+                eyeButton = `<button class="eye-unlock-btn" data-action="lock" data-id="${snippet.id}">
                     <span class="eye-text">Hide</span>
                 </button>`;
             }
         }
         
         return `
-            <div class="code-item">
+            <div class="code-item" data-snippet-id="${snippet.id}">
                 <div class="code-title">${highlightedTitle}</div>
                 <div class="timestamp">Added: ${snippet.timestamp}</div>
                 <div class="code-content-wrapper">
@@ -287,10 +287,10 @@ function renderCodeList() {
                     <div class="${contentClass}">${escapeHtml(displayContent)}</div>
                 </div>
                 <div class="code-actions">
-                    <button class="btn btn-copy" onclick="copyToClipboard(${snippet.id}, \`${escapeForJS(displayContent)}\`, this)">
+                    <button class="btn btn-copy" data-action="copy" data-id="${snippet.id}" data-content="${escapeForJS(displayContent)}">
                         📋 Copy to Clipboard
                     </button>
-                    <button class="btn btn-delete" onclick="deleteCode(${snippet.id})">
+                    <button class="btn btn-delete" data-action="delete" data-id="${snippet.id}">
                         🗑️ Delete
                     </button>
                 </div>
@@ -298,6 +298,29 @@ function renderCodeList() {
         `;
     }).join('');
 }
+
+// Event delegation for buttons
+codeList.addEventListener('click', function(e) {
+    const button = e.target.closest('button[data-action]');
+    if (!button) return;
+    
+    const action = button.dataset.action;
+    const id = parseInt(button.dataset.id, 10);
+    
+    if (action === 'delete') {
+        deleteCode(id);
+    } else if (action === 'copy') {
+        const snippet = codeSnippets.find(s => s.id === id);
+        if (snippet) {
+            const displayContent = button.dataset.content || snippet.code;
+            copyToClipboard(id, displayContent, button);
+        }
+    } else if (action === 'unlock') {
+        unlockContent(id);
+    } else if (action === 'lock') {
+        lockContent(id);
+    }
+});
 
 // Highlight matching text in search results
 function highlightText(text, query) {
