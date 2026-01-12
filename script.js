@@ -132,8 +132,10 @@ function addCode() {
 // Delete code function
 async function deleteCode(id) {
     console.log('Delete called with ID:', id, 'Type:', typeof id);
+    console.log('All snippet IDs:', codeSnippets.map(s => ({ id: s.id, type: typeof s.id })));
     
-    const snippet = codeSnippets.find(s => s.id === id);
+    // Use loose comparison (==) to match both string and number types
+    const snippet = codeSnippets.find(s => s.id == id);
     
     if (!snippet) {
         console.log('Snippet not found. Available IDs:', codeSnippets.map(s => s.id));
@@ -160,9 +162,9 @@ async function deleteCode(id) {
     
     console.log('Deleting snippet from array...');
     
-    // Remove from local array
+    // Remove from local array using loose comparison
     const beforeLength = codeSnippets.length;
-    codeSnippets = codeSnippets.filter(s => s.id !== id);
+    codeSnippets = codeSnippets.filter(s => s.id != id);
     const afterLength = codeSnippets.length;
     
     console.log('Array length before:', beforeLength, 'after:', afterLength);
@@ -323,20 +325,28 @@ codeList.addEventListener('click', async function(e) {
     if (!button) return;
     
     const action = button.dataset.action;
-    const id = parseInt(button.dataset.id, 10);
+    // Keep ID as string first, then try to match
+    const idStr = button.dataset.id;
+    const idNum = parseInt(idStr, 10);
+    
+    // Find snippet with either string or number comparison
+    let snippet = codeSnippets.find(s => s.id == idStr || s.id === idNum);
     
     if (action === 'delete') {
-        await deleteCode(id);
+        if (!snippet) {
+            console.error('Cannot find snippet with ID:', idStr, idNum);
+            console.log('Available snippets:', codeSnippets.map(s => ({ id: s.id, type: typeof s.id, title: s.title })));
+        }
+        await deleteCode(snippet ? snippet.id : idNum);
     } else if (action === 'copy') {
-        const snippet = codeSnippets.find(s => s.id === id);
         if (snippet) {
             const displayContent = button.dataset.content || snippet.code;
-            copyToClipboard(id, displayContent, button);
+            copyToClipboard(snippet.id, displayContent, button);
         }
     } else if (action === 'unlock') {
-        unlockContent(id);
+        unlockContent(snippet ? snippet.id : idNum);
     } else if (action === 'lock') {
-        lockContent(id);
+        lockContent(snippet ? snippet.id : idNum);
     }
 });
 
@@ -469,7 +479,12 @@ async function loadFromDatabaseJSON() {
             const data = await response.json();
             
             if (Array.isArray(data) && data.length > 0) {
-                codeSnippets = data;
+                // Normalize IDs to numbers to ensure consistency
+                codeSnippets = data.map(snippet => ({
+                    ...snippet,
+                    id: typeof snippet.id === 'string' ? parseInt(snippet.id, 10) : snippet.id
+                }));
+                console.log('Loaded snippets from database:', codeSnippets.length);
             }
         } else {
             console.error('Failed to load data from database');
