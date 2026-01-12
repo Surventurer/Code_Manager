@@ -130,9 +130,12 @@ function addCode() {
 }
 
 // Delete code function
-function deleteCode(id) {
+async function deleteCode(id) {
     const snippet = codeSnippets.find(s => s.id === id);
-    if (!snippet) return;
+    if (!snippet) {
+        alert('Snippet not found!');
+        return;
+    }
     
     const enteredPassword = prompt('Enter password to delete this snippet:');
     
@@ -141,17 +144,37 @@ function deleteCode(id) {
     }
     
     if (enteredPassword !== snippet.password) {
-        alert('Incorrect password! Cannot delete snippet.');
+        alert('❌ Incorrect password! Cannot delete snippet.');
         return;
     }
     
-    if (!confirm('Are you sure you want to delete this snippet?')) {
+    if (!confirm('⚠️ Are you sure you want to delete this snippet? This action cannot be undone.')) {
         return;
     }
     
-    codeSnippets = codeSnippets.filter(snippet => snippet.id !== id);
+    // Remove from local array
+    codeSnippets = codeSnippets.filter(s => s.id !== id);
+    
+    // Remove from unlocked cache if present
+    unlockedSnippets.delete(id);
+    decryptedContent.delete(id);
+    
+    // Update GUI immediately
     renderCodeList();
-    saveToDatabaseJSON();
+    
+    // Save to database
+    try {
+        await saveToDatabaseJSON();
+        // Show success feedback briefly
+        const tempDiv = document.createElement('div');
+        tempDiv.style.cssText = 'position:fixed;top:20px;right:20px;background:#4CAF50;color:white;padding:15px 25px;border-radius:8px;box-shadow:0 4px 6px rgba(0,0,0,0.1);z-index:10000;font-family:Arial,sans-serif;';
+        tempDiv.textContent = '✓ Snippet deleted successfully!';
+        document.body.appendChild(tempDiv);
+        setTimeout(() => tempDiv.remove(), 2000);
+    } catch (error) {
+        console.error('Error deleting snippet:', error);
+        alert('⚠️ Warning: Snippet removed from display but there was an error saving to database. Please refresh the page.');
+    }
 }
 
 // Copy to clipboard function
