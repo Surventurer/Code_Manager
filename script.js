@@ -198,27 +198,38 @@ async function deleteCode(id) {
 }
 
 // Copy to clipboard function
-function copyToClipboard(id, code, button) {
-    const snippet = codeSnippets.find(s => s.id === id);
-    let contentToCopy = code;
+function copyToClipboard(id, button) {
+    const snippet = codeSnippets.find(s => s.id == id);
+    
+    if (!snippet) {
+        alert('❌ Snippet not found!');
+        return;
+    }
+    
+    let contentToCopy = snippet.code;
     
     // Check if snippet is encrypted and needs decryption
-    if (snippet && snippet.isEncrypted) {
-        // Check if already decrypted in cache
+    if (snippet.isEncrypted) {
+        // Check if already decrypted in cache (snippet is unlocked)
         if (decryptedContent.has(id)) {
             contentToCopy = decryptedContent.get(id);
         } else {
             // Need password to decrypt
-            const enteredPassword = prompt('Enter password to copy:');
+            const enteredPassword = prompt('🔒 Enter password to copy:');
             
             if (enteredPassword === null) {
                 return; // User cancelled
             }
             
-            // Try to decrypt
+            if (enteredPassword !== snippet.password) {
+                alert('❌ Incorrect password! Cannot copy content.');
+                return;
+            }
+            
+            // Try to decrypt with the correct password
             const decrypted = decryptContent(snippet.code, enteredPassword);
             if (!decrypted) {
-                alert('Incorrect password! Cannot copy content.');
+                alert('❌ Failed to decrypt content!');
                 return;
             }
             
@@ -307,7 +318,7 @@ function renderCodeList() {
                     <div class="${contentClass}">${escapeHtml(displayContent)}</div>
                 </div>
                 <div class="code-actions">
-                    <button class="btn btn-copy" data-action="copy" data-id="${snippet.id}" data-content="${escapeForJS(displayContent)}">
+                    <button class="btn btn-copy" data-action="copy" data-id="${snippet.id}">
                         📋 Copy to Clipboard
                     </button>
                     <button class="btn btn-delete" data-action="delete" data-id="${snippet.id}">
@@ -340,8 +351,7 @@ codeList.addEventListener('click', async function(e) {
         await deleteCode(snippet ? snippet.id : idNum);
     } else if (action === 'copy') {
         if (snippet) {
-            const displayContent = button.dataset.content || snippet.code;
-            copyToClipboard(snippet.id, displayContent, button);
+            copyToClipboard(snippet.id, button);
         }
     } else if (action === 'unlock') {
         unlockContent(snippet ? snippet.id : idNum);
