@@ -5,13 +5,22 @@ const config = {
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   host: process.env.DB_HOST,
-  port: process.env.DB_PORT,
+  port: parseInt(process.env.DB_PORT, 10),
   database: process.env.DB_NAME,
   ssl: {
     rejectUnauthorized: true,
     ca: process.env.DB_CA_CERT,
   },
 };
+
+// Log config for debugging (without sensitive data)
+console.log('DB Config:', {
+  user: config.user,
+  host: config.host,
+  port: config.port,
+  database: config.database,
+  hasCert: !!config.ssl.ca
+});
 
 // Create a connection pool
 let pool;
