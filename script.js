@@ -432,11 +432,12 @@ function renderCodeList() {
     // Get search query
     const searchQuery = searchInput.value.trim().toLowerCase();
     
-    // Filter snippets based on search query
+    // Filter snippets based on search query (searches title and timestamp)
     const filteredSnippets = searchQuery === '' 
         ? codeSnippets 
         : codeSnippets.filter(snippet => 
-            snippet.title.toLowerCase().includes(searchQuery)
+            snippet.title.toLowerCase().includes(searchQuery) ||
+            (snippet.timestamp && snippet.timestamp.toLowerCase().includes(searchQuery))
           );
     
     // Check if no results found
