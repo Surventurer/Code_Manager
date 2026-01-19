@@ -9,54 +9,84 @@ let decryptedContent = new Map(); // Cache decrypted content
 let autoUpdateInterval = null;
 let lastUpdateHash = null;
 
-// ===== Encryption/Decryption Functions =====
+// ===== Server-Side Encryption/Decryption Functions =====
 
-// Simple encryption using XOR-based algorithm with Unicode support
-function encryptContent(text, password) {
+// Legacy XOR decryption for backward compatibility with old encrypted content
+function legacyDecrypt(encryptedText, password) {
     try {
-        // Convert Unicode text to UTF-8 bytes, then encrypt
-        const utf8Text = encodeURIComponent(text);
-        const key = generateKey(password);
-        let encrypted = '';
-        
-        for (let i = 0; i < utf8Text.length; i++) {
-            const charCode = utf8Text.charCodeAt(i) ^ key.charCodeAt(i % key.length);
-            encrypted += String.fromCharCode(charCode);
+        let key = password;
+        while (key.length < 256) {
+            key += password;
         }
-        
-        // Convert binary string to base64
-        return btoa(encrypted);
+        const encrypted = atob(encryptedText);
+        let decrypted = '';
+        for (let i = 0; i < encrypted.length; i++) {
+            const charCode = encrypted.charCodeAt(i) ^ key.charCodeAt(i % key.length);
+            decrypted += String.fromCharCode(charCode);
+        }
+        return decodeURIComponent(decrypted);
     } catch (e) {
         return null;
     }
 }
 
-function decryptContent(encryptedText, password) {
+// Encrypt content using server-side API (AES-256-GCM)
+async function encryptContent(text, password) {
     try {
-        const key = generateKey(password);
-        // Decode base64 to binary string
-        const encrypted = atob(encryptedText);
-        let decrypted = '';
+        const response = await fetch('/.netlify/functions/crypto', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'encrypt',
+                content: text,
+                password: password
+            })
+        });
         
-        for (let i = 0; i < encrypted.length; i++) {
-            const charCode = encrypted.charCodeAt(i) ^ key.charCodeAt(i % key.length);
-            decrypted += String.fromCharCode(charCode);
+        const data = await response.json();
+        
+        if (!response.ok || !data.success) {
+            console.error('Encryption failed:', data.error);
+            return null;
         }
         
-        // Convert UTF-8 bytes back to Unicode text
-        return decodeURIComponent(decrypted);
+        return data.encrypted;
     } catch (e) {
-        return null; // Decryption failed
+        console.error('Encryption error:', e);
+        return null;
     }
 }
 
-function generateKey(password) {
-    // Create a longer key from password
-    let key = password;
-    while (key.length < 256) {
-        key += password;
+// Decrypt content using server-side API (with fallback to legacy XOR)
+async function decryptContent(encryptedText, password) {
+    // First, try server-side AES decryption
+    try {
+        const response = await fetch('/.netlify/functions/crypto', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'decrypt',
+                content: encryptedText,
+                password: password
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+            return data.decrypted;
+        }
+    } catch (e) {
+        console.error('Server decryption error:', e);
     }
-    return key;
+    
+    // Fallback to legacy XOR decryption for old content
+    const legacyResult = legacyDecrypt(encryptedText, password);
+    if (legacyResult) {
+        return legacyResult;
+    }
+    
+    return null;
 }
 
 // DOM elements
@@ -224,11 +254,26 @@ async function addCode() {
         }
     }
     
+    // Encrypt content if hidden (using server-side encryption)
+    let finalContent = content;
+    if (hideContent) {
+        addBtn.disabled = true;
+        addBtn.textContent = 'Encrypting...';
+        finalContent = await encryptContent(content, password);
+        addBtn.disabled = false;
+        addBtn.textContent = 'Add Snippet';
+        
+        if (!finalContent) {
+            alert('Failed to encrypt content!');
+            return;
+        }
+    }
+    
     const snippet = {
         id: Date.now(),
         title: title,
         contentType: contentType,
-        content: hideContent ? encryptContent(content, password) : content,
+        content: finalContent,
         fileName: selectedFile ? selectedFile.name : null,
         fileType: selectedFile ? selectedFile.type : null,
         password: password,
@@ -318,7 +363,7 @@ async function deleteCode(id) {
 }
 
 // Copy to clipboard function
-function copyToClipboard(id, button) {
+async function copyToClipboard(id, button) {
     const snippet = codeSnippets.find(s => s.id == id);
     
     if (!snippet) {
@@ -347,9 +392,11 @@ function copyToClipboard(id, button) {
                 return;
             }
             
-            // Try to decrypt with the correct password
-            const decrypted = decryptContent(contentToCopy, enteredPassword);
+            // Try to decrypt with the correct password (server-side)
+            button.textContent = '⏳ Decrypting...';
+            const decrypted = await decryptContent(contentToCopy, enteredPassword);
             if (!decrypted) {
+                button.textContent = '📋 Copy';
                 alert('❌ Failed to decrypt content!');
                 return;
             }
@@ -374,7 +421,7 @@ function copyToClipboard(id, button) {
 }
 
 // Download file function (for images and PDFs)
-function downloadFile(id) {
+async function downloadFile(id) {
     const snippet = codeSnippets.find(s => s.id == id);
     
     if (!snippet) {
@@ -402,8 +449,8 @@ function downloadFile(id) {
                 return;
             }
             
-            // Try to decrypt
-            const decrypted = decryptContent(fileContent, enteredPassword);
+            // Try to decrypt (server-side)
+            const decrypted = await decryptContent(fileContent, enteredPassword);
             if (!decrypted) {
                 alert('❌ Failed to decrypt file!');
                 return;
@@ -635,7 +682,7 @@ function escapeForJS(text) {
 // ===== Hide Content Feature =====
 
 // Unlock content (called when clicking on protected content)
-function unlockContent(id) {
+async function unlockContent(id) {
     const snippet = codeSnippets.find(s => s.id == id);
     if (!snippet) return;
     
@@ -650,10 +697,20 @@ function unlockContent(id) {
         return;
     }
     
-    // Try to decrypt the content
+    // Try to decrypt the content (server-side)
     if (snippet.isEncrypted) {
         const rawContent = snippet.content || snippet.code || '';
-        const decrypted = decryptContent(rawContent, enteredPassword);
+        
+        // Show loading indicator
+        const loadingDiv = document.createElement('div');
+        loadingDiv.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.8);color:white;padding:20px 40px;border-radius:10px;z-index:10000;';
+        loadingDiv.textContent = '🔓 Decrypting...';
+        document.body.appendChild(loadingDiv);
+        
+        const decrypted = await decryptContent(rawContent, enteredPassword);
+        
+        loadingDiv.remove();
+        
         if (!decrypted) {
             alert('❌ Failed to decrypt! Content remains hidden.');
             return;
