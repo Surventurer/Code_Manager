@@ -432,13 +432,29 @@ function renderCodeList() {
     // Get search query
     const searchQuery = searchInput.value.trim().toLowerCase();
     
-    // Filter snippets based on search query (searches title and timestamp)
-    const filteredSnippets = searchQuery === '' 
-        ? codeSnippets 
-        : codeSnippets.filter(snippet => 
-            snippet.title.toLowerCase().includes(searchQuery) ||
-            (snippet.timestamp && snippet.timestamp.toLowerCase().includes(searchQuery))
-          );
+    // Filter snippets based on search query
+    // Supports: title, date, or both with + (e.g. "report + jan" matches title AND date)
+    let filteredSnippets = codeSnippets;
+    
+    if (searchQuery !== '') {
+        // Check if using AND operator (+)
+        if (searchQuery.includes('+')) {
+            const terms = searchQuery.split('+').map(t => t.trim()).filter(t => t !== '');
+            filteredSnippets = codeSnippets.filter(snippet => {
+                const title = snippet.title.toLowerCase();
+                const timestamp = (snippet.timestamp || '').toLowerCase();
+                const combined = title + ' ' + timestamp;
+                // All terms must match somewhere in title or timestamp
+                return terms.every(term => combined.includes(term));
+            });
+        } else {
+            // Simple OR search (matches title OR timestamp)
+            filteredSnippets = codeSnippets.filter(snippet => 
+                snippet.title.toLowerCase().includes(searchQuery) ||
+                (snippet.timestamp && snippet.timestamp.toLowerCase().includes(searchQuery))
+            );
+        }
+    }
     
     // Check if no results found
     if (filteredSnippets.length === 0) {
