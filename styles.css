@@ -425,7 +425,174 @@ h1 {
 }
 
 /* Responsive Design */
-@media (max-width: 768px) {
+
+/* Large Laptops & Desktops (1200px and above) */
+@media (min-width: 1200px) {
+    .container {
+        max-width: 900px;
+        padding: 40px;
+    }
+    
+    h1 {
+        font-size: 2.8em;
+    }
+    
+    .code-list {
+        gap: 20px;
+    }
+    
+    .code-item {
+        padding: 20px;
+    }
+    
+    .code-content {
+        max-height: 350px;
+    }
+}
+
+/* Laptops & Small Desktops (992px - 1199px) */
+@media (min-width: 992px) and (max-width: 1199px) {
+    .container {
+        max-width: 850px;
+        padding: 35px;
+    }
+    
+    h1 {
+        font-size: 2.5em;
+    }
+}
+
+/* iPad Pro & Large Tablets (768px - 991px) */
+@media (min-width: 768px) and (max-width: 991px) {
+    body {
+        padding: 15px;
+    }
+    
+    .container {
+        max-width: 720px;
+        padding: 30px;
+    }
+    
+    h1 {
+        font-size: 2.2em;
+        margin-bottom: 25px;
+    }
+    
+    .auto-update-indicator {
+        top: 30px;
+        right: 30px;
+        padding: 5px 10px;
+        font-size: 11px;
+    }
+    
+    .pulse-dot {
+        width: 7px;
+        height: 7px;
+    }
+    
+    #searchInput {
+        max-width: 100%;
+    }
+    
+    .content-type-selector {
+        gap: 12px;
+    }
+    
+    .type-option {
+        padding: 10px 15px;
+    }
+    
+    .code-actions {
+        flex-direction: row;
+    }
+    
+    .btn-copy,
+    .btn-delete,
+    .btn-download {
+        min-width: 100px;
+        padding: 10px 15px;
+        font-size: 14px;
+    }
+}
+
+/* iPad Mini & Small Tablets (600px - 767px) */
+@media (min-width: 600px) and (max-width: 767px) {
+    body {
+        padding: 12px;
+    }
+    
+    .container {
+        padding: 25px;
+        border-radius: 10px;
+    }
+    
+    h1 {
+        font-size: 2em;
+        margin-bottom: 20px;
+    }
+    
+    .auto-update-indicator {
+        top: 25px;
+        right: 25px;
+        padding: 5px 10px;
+        font-size: 11px;
+    }
+    
+    #searchInput,
+    #passwordInput,
+    #titleInput {
+        padding: 12px;
+        font-size: 15px;
+        margin-bottom: 12px;
+    }
+    
+    #codeInput {
+        min-height: 130px;
+        padding: 12px;
+        font-size: 14px;
+    }
+    
+    .content-type-selector {
+        gap: 10px;
+    }
+    
+    .type-option {
+        padding: 10px 14px;
+    }
+    
+    .type-option span {
+        font-size: 13px;
+    }
+    
+    .code-item {
+        padding: 15px;
+    }
+    
+    .code-title {
+        font-size: 17px;
+    }
+    
+    .code-content {
+        padding: 12px;
+        font-size: 13px;
+        max-height: 280px;
+    }
+    
+    .code-actions {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+    
+    .btn-copy,
+    .btn-delete,
+    .btn-download {
+        flex: 1;
+        min-width: 100px;
+    }
+}
+
+/* Large Phones (480px - 599px) */
+@media (min-width: 480px) and (max-width: 599px) {
     body {
         padding: 10px;
     }
@@ -436,8 +603,23 @@ h1 {
     }
     
     h1 {
-        font-size: 2em;
-        margin-bottom: 20px;
+        font-size: 1.8em;
+        margin-bottom: 18px;
+    }
+    
+    .auto-update-indicator {
+        position: relative;
+        top: auto;
+        right: auto;
+        margin: 0 auto 15px;
+        width: fit-content;
+        padding: 5px 12px;
+        font-size: 11px;
+    }
+    
+    .pulse-dot {
+        width: 6px;
+        height: 6px;
     }
     
     #searchInput,
@@ -449,16 +631,29 @@ h1 {
     }
     
     #codeInput {
-        min-height: 120px;
+        min-height: 110px;
         padding: 12px;
         font-size: 13px;
         margin-bottom: 12px;
     }
     
+    .content-type-selector {
+        gap: 8px;
+    }
+    
+    .type-option {
+        flex: 1;
+        justify-content: center;
+        padding: 10px 12px;
+    }
+    
+    .type-option span {
+        font-size: 12px;
+    }
+    
     .btn {
-        padding: 10px 20px;
+        padding: 11px 18px;
         font-size: 14px;
-        margin-right: 5px;
     }
     
     .code-item {
@@ -482,19 +677,57 @@ h1 {
     }
     
     .btn-copy,
-    .btn-delete {
+    .btn-delete,
+    .btn-download {
         width: 100%;
         margin-right: 0;
     }
+    
+    .snippet-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
 }
 
-@media (max-width: 480px) {
+/* Small Phones (320px - 479px) */
+@media (max-width: 479px) {
+    body {
+        padding: 8px;
+    }
+    
     .container {
         padding: 15px;
+        border-radius: 8px;
     }
     
     h1 {
-        font-size: 1.75em;
+        font-size: 1.5em;
+        margin-bottom: 15px;
+        padding-right: 0;
+    }
+    
+    .auto-update-indicator {
+        position: relative;
+        top: auto;
+        right: auto;
+        margin: 0 auto 12px;
+        width: fit-content;
+        padding: 4px 10px;
+        font-size: 10px;
+        gap: 6px;
+    }
+    
+    .pulse-dot {
+        width: 6px;
+        height: 6px;
+    }
+    
+    .indicator-text {
+        font-size: 10px;
+    }
+    
+    .search-section {
         margin-bottom: 15px;
     }
     
@@ -503,21 +736,105 @@ h1 {
     #titleInput {
         padding: 10px;
         font-size: 14px;
+        margin-bottom: 10px;
+    }
+    
+    #searchInput::placeholder,
+    #passwordInput::placeholder,
+    #titleInput::placeholder {
+        font-size: 13px;
     }
     
     #codeInput {
         min-height: 100px;
         padding: 10px;
         font-size: 12px;
+        margin-bottom: 10px;
+    }
+    
+    .input-section {
+        margin-bottom: 20px;
+    }
+    
+    .content-type-selector {
+        gap: 6px;
+        flex-wrap: wrap;
+    }
+    
+    .type-option {
+        flex: 1;
+        min-width: calc(33% - 6px);
+        justify-content: center;
+        padding: 8px 6px;
+        gap: 4px;
+    }
+    
+    .type-option span {
+        font-size: 11px;
+    }
+    
+    .hide-content-section {
+        margin-bottom: 15px;
+    }
+    
+    .toggle-container {
+        gap: 10px;
+    }
+    
+    .toggle-slider {
+        width: 44px;
+        height: 24px;
+    }
+    
+    .toggle-slider::before {
+        width: 18px;
+        height: 18px;
+    }
+    
+    .toggle-container input[type="checkbox"]:checked + .toggle-slider::before {
+        transform: translateX(20px);
+    }
+    
+    .toggle-label {
+        font-size: 14px;
     }
     
     .btn {
         padding: 10px 15px;
         font-size: 13px;
+        margin-right: 0;
+    }
+    
+    .btn-add {
+        padding: 12px 20px;
+    }
+    
+    .backup-controls {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .btn-secondary {
+        width: 100%;
+        padding: 10px 15px;
+        font-size: 13px;
+    }
+    
+    .code-list {
+        gap: 12px;
+    }
+    
+    .code-item {
+        padding: 12px;
     }
     
     .code-title {
         font-size: 15px;
+        word-break: break-word;
+    }
+    
+    .timestamp {
+        font-size: 11px;
     }
     
     .code-content {
@@ -526,8 +843,69 @@ h1 {
         max-height: 200px;
     }
     
-    .timestamp {
+    .code-actions {
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 12px;
+    }
+    
+    .btn-copy,
+    .btn-delete,
+    .btn-download {
+        width: 100%;
+        min-width: auto;
+        padding: 10px 15px;
+        font-size: 14px;
+    }
+    
+    .empty-state,
+    .no-results {
+        padding: 30px 15px;
+        font-size: 16px;
+    }
+    
+    .snippet-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+    
+    .type-badge {
+        padding: 3px 10px;
         font-size: 11px;
+    }
+    
+    .snippet-content {
+        padding: 12px;
+        font-size: 12px;
+        max-height: 300px;
+    }
+    
+    .snippet-content.protected {
+        padding: 30px 12px;
+        min-height: 100px;
+        font-size: 13px;
+    }
+    
+    .eye-unlock-btn {
+        top: 8px;
+        right: 8px;
+        padding: 6px 10px;
+        font-size: 16px;
+        gap: 6px;
+    }
+    
+    .eye-unlock-btn .eye-text {
+        font-size: 10px;
+    }
+    
+    .pdf-container {
+        min-height: 300px;
+    }
+    
+    .file-name {
+        font-size: 12px;
+        padding: 8px 12px;
     }
 }
 
@@ -573,7 +951,7 @@ h1 {
     transition: all 0.3s;
 }
 
-/* File Upload Area */
+/* File Upload Area - Responsive */
 #fileUploadArea {
     margin: 20px 0;
     padding: 30px;
@@ -598,6 +976,45 @@ h1 {
     border-radius: 8px;
     font-size: 16px;
     cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    font-weight: 600;
+}
+
+.btn-file-select:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.btn-file-select:active {
+    transform: translateY(0);
+}
+
+/* iPad and Tablet specific file upload */
+@media (min-width: 600px) and (max-width: 991px) {
+    #fileUploadArea {
+        padding: 25px;
+    }
+    
+    .btn-file-select {
+        padding: 14px 35px;
+        font-size: 15px;
+    }
+}
+
+/* Mobile specific file upload */
+@media (max-width: 599px) {
+    #fileUploadArea {
+        padding: 20px 15px;
+        margin: 15px 0;
+    }
+    
+    .btn-file-select {
+        padding: 12px 25px;
+        font-size: 14px;
+        width: 100%;
+    }
+}
     transition: all 0.3s;
     box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
     font-weight: 600;
@@ -787,69 +1204,78 @@ h1 {
     box-shadow: 0 5px 15px rgba(240, 147, 251, 0.4);
 }
 
-@media (max-width: 600px) {
-    .content-type-selector {
-        flex-direction: row;
-        gap: 8px;
-    }
-    
-    .type-option {
-        flex: 1;
-        justify-content: center;
-        padding: 8px 10px;
-    }
-    
-    .type-option span {
-        font-size: 12px;
-    }
-    
-    .snippet-header {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-    
-    #fileUploadArea {
-        padding: 20px 15px;
-    }
-    
-    .btn-file-select {
-        padding: 12px 30px;
-        font-size: 14px;
-        width: 100%;
-    }
-    
-    .file-preview-container {
-        padding: 15px;
-    }
-    
-    .file-preview-container img {
-        max-height: 180px;
+/* iPad Landscape specific styles */
+@media (min-width: 1024px) and (max-width: 1366px) and (orientation: landscape) {
+    .container {
+        max-width: 900px;
     }
     
     .code-actions {
-        flex-direction: column;
-        gap: 10px;
+        flex-direction: row;
+    }
+}
+
+/* iPad Portrait specific styles */
+@media (min-width: 768px) and (max-width: 1024px) and (orientation: portrait) {
+    .container {
+        max-width: 100%;
+        margin: 0 10px;
+    }
+    
+    h1 {
+        font-size: 2em;
+    }
+    
+    .auto-update-indicator {
+        top: 25px;
+        right: 25px;
+    }
+    
+    .code-actions {
+        flex-direction: row;
+        flex-wrap: wrap;
     }
     
     .btn-copy,
     .btn-delete,
     .btn-download {
-        width: 100%;
-        min-width: auto;
+        flex: 1;
+        min-width: 45%;
+    }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+    .btn,
+    .btn-add,
+    .btn-copy,
+    .btn-delete,
+    .btn-download,
+    .btn-secondary,
+    .btn-file-select,
+    .type-option {
+        min-height: 44px;
     }
     
-    .snippet-content.protected {
-        padding: 40px 15px;
-        min-height: 120px;
-        font-size: 14px;
+    .toggle-slider {
+        min-width: 50px;
+        min-height: 28px;
+    }
+    
+    .toggle-slider::before {
+        width: 22px;
+        height: 22px;
     }
     
     .eye-unlock-btn {
-        padding: 6px 12px;
-        font-size: 11px;
+        min-height: 40px;
+        padding: 10px 16px;
     }
-    
-    .eye-unlock-btn .eye-text {
-        font-size: 11px;
+}
+
+/* High DPI / Retina displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    .code-content {
+        -webkit-font-smoothing: antialiased;
     }
 }
