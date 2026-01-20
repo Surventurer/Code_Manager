@@ -1,6 +1,6 @@
 // ===== Security Module for JustVue =====
 // TEMPORARILY DISABLED FOR DEBUGGING
-
+/*
 (function() {
     'use strict';
     
@@ -111,3 +111,4 @@
     
 })();
 
+*/
