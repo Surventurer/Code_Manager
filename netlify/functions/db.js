@@ -257,6 +257,22 @@ async function getFileUrl(storagePath) {
   return data.signedUrl;
 }
 
+// Download file content as base64 (for encrypted files that need decryption)
+async function downloadFileContent(storagePath) {
+  const supabase = getSupabase();
+  
+  const { data, error } = await supabase.storage
+    .from(STORAGE_BUCKET)
+    .download(storagePath);
+  
+  if (error) throw error;
+  
+  // Convert blob to base64
+  const arrayBuffer = await data.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  return buffer.toString('base64');
+}
+
 // Get public URL for file (if bucket is public)
 function getPublicUrl(storagePath) {
   const supabase = getSupabase();
@@ -321,6 +337,7 @@ module.exports = {
   saveAllSnippets,
   uploadFile,
   getFileUrl,
+  downloadFileContent,
   getPublicUrl,
   deleteFile,
   STORAGE_BUCKET

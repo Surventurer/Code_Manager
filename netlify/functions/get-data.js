@@ -3,7 +3,8 @@ const {
   getSnippetCount, 
   getSnippetsPaginated, 
   getSnippetById,
-  getFileUrl
+  getFileUrl,
+  downloadFileContent
 } = require('./db');
 
 exports.handler = async function(event, context) {
@@ -52,6 +53,32 @@ exports.handler = async function(event, context) {
             fileUrl: fileUrl
           })
         };
+      }
+      
+      // If it's an encrypted file and content is requested, download from storage
+      const getContent = params.getContent === 'true';
+      if (getContent && snippet.storagePath && snippet.isEncrypted) {
+        try {
+          const encryptedContent = await downloadFileContent(snippet.storagePath);
+          return {
+            statusCode: 200,
+            headers,
+            body: JSON.stringify({
+              ...snippet,
+              content: encryptedContent // Return encrypted base64 for decryption
+            })
+          };
+        } catch (downloadError) {
+          console.error('Error downloading file:', downloadError);
+          return {
+            statusCode: 500,
+            headers,
+            body: JSON.stringify({ 
+              error: 'Failed to download encrypted file',
+              details: downloadError.message 
+            })
+          };
+        }
       }
       
       return {

@@ -487,7 +487,52 @@ async function downloadFile(id) {
                 return;
             }
             
-            // Try to decrypt (server-side)
+            // If file is in storage, download and decrypt
+            if (snippet.storagePath) {
+                const loadingDiv = document.createElement('div');
+                loadingDiv.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.8);color:white;padding:20px 40px;border-radius:10px;z-index:10000;';
+                loadingDiv.textContent = '📥 Downloading encrypted file...';
+                document.body.appendChild(loadingDiv);
+                
+                try {
+                    const response = await fetch(`/.netlify/functions/get-data?id=${id}&getContent=true`);
+                    if (!response.ok) {
+                        loadingDiv.remove();
+                        alert('❌ Failed to download encrypted file');
+                        return;
+                    }
+                    
+                    const data = await response.json();
+                    const rawContent = data.content;
+                    
+                    if (!rawContent) {
+                        loadingDiv.remove();
+                        alert('❌ No encrypted content found');
+                        return;
+                    }
+                    
+                    loadingDiv.textContent = '🔓 Decrypting...';
+                    
+                    const decrypted = await decryptContent(rawContent, enteredPassword);
+                    loadingDiv.remove();
+                    
+                    if (!decrypted) {
+                        alert('❌ Failed to decrypt file!');
+                        return;
+                    }
+                    
+                    // Cache decrypted content
+                    decryptedContent.set(id, decrypted);
+                    downloadBase64File(decrypted, snippet.fileName || `file-${snippet.id}`);
+                    return;
+                } catch (e) {
+                    loadingDiv.remove();
+                    alert('❌ Failed to download file: ' + e.message);
+                    return;
+                }
+            }
+            
+            // Try to decrypt from content (text/inline)
             const rawContent = snippet.content || snippet.code || '';
             const decrypted = await decryptContent(rawContent, enteredPassword);
             if (!decrypted) {
@@ -600,11 +645,20 @@ function renderCodeList() {
         let contentHtml = '';
         const contentClass = isProtected ? 'snippet-content protected' : 'snippet-content';
         
+        // Check if we have decrypted content cached for this snippet
+        const hasDecryptedContent = decryptedContent.has(snippet.id);
+        
         if (contentType === 'image') {
             if (isProtected) {
                 contentHtml = `<div class="snippet-content protected">
                     <div style="font-size: 48px; margin-bottom: 10px;">🖼️</div>
                     <div>🔒 Image is hidden</div>
+                </div>`;
+            } else if (hasDecryptedContent) {
+                // Decrypted content is available (for encrypted files)
+                contentHtml = `<div class="snippet-content">
+                    <img src="${displayContent}" alt="${escapeHtml(snippet.fileName || 'Image')}" style="max-width: 100%; border-radius: 8px;">
+                    ${snippet.fileName ? `<p class="file-name">📷 ${escapeHtml(snippet.fileName)}</p>` : ''}
                 </div>`;
             } else if (hasStoragePath && !snippet.fileUrl) {
                 // File stored in Supabase Storage - needs to load URL
@@ -626,6 +680,14 @@ function renderCodeList() {
                 contentHtml = `<div class="snippet-content protected">
                     <div style="font-size: 48px; margin-bottom: 10px;">📄</div>
                     <div>🔒 PDF is hidden</div>
+                </div>`;
+            } else if (hasDecryptedContent) {
+                // Decrypted PDF content available
+                contentHtml = `<div class="snippet-content">
+                    <div class="pdf-container">
+                        <embed src="${displayContent}" type="application/pdf" width="100%" height="400px" />
+                        <p class="file-name">📄 ${escapeHtml(snippet.fileName || 'Document.pdf')}</p>
+                    </div>
                 </div>`;
             } else if (hasStoragePath && !snippet.fileUrl) {
                 // File stored in Supabase Storage - needs to load URL
@@ -815,26 +877,55 @@ async function unlockContent(id) {
     if (snippet.isEncrypted) {
         let rawContent = snippet.content || snippet.code || '';
         
-        // If content is empty and it's a file, we need to load it first from storage
+        // If content is empty and it's an encrypted file in storage
         if (!rawContent && snippet.storagePath) {
-            // For encrypted files stored in Supabase, the file itself is encrypted
-            // Load the file URL first
+            // Show loading indicator
+            const loadingDiv = document.createElement('div');
+            loadingDiv.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.8);color:white;padding:20px 40px;border-radius:10px;z-index:10000;';
+            loadingDiv.textContent = '📥 Downloading encrypted file...';
+            document.body.appendChild(loadingDiv);
+            
             try {
-                const response = await fetch(`/.netlify/functions/get-data?id=${snippet.id}&getUrl=true`);
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.fileUrl) {
-                        // File is in storage - for encrypted files, we need different handling
-                        // The encryption was done on the base64 content before upload
-                        // For now, mark as unlocked (file URL is the "decrypted" state)
-                        decryptedContent.set(id, data.fileUrl);
-                        unlockedSnippets.add(id);
-                        renderCodeList();
-                        return;
-                    }
+                // Fetch encrypted file content from storage
+                const response = await fetch(`/.netlify/functions/get-data?id=${snippet.id}&getContent=true`);
+                if (!response.ok) {
+                    loadingDiv.remove();
+                    const err = await response.json();
+                    alert('❌ Failed to download encrypted file: ' + (err.error || 'Unknown error'));
+                    return;
                 }
+                
+                const data = await response.json();
+                rawContent = data.content;
+                
+                if (!rawContent) {
+                    loadingDiv.remove();
+                    alert('❌ No encrypted content found in file');
+                    return;
+                }
+                
+                loadingDiv.textContent = '🔓 Decrypting...';
+                
+                // Decrypt the file content
+                const decrypted = await decryptContent(rawContent, enteredPassword);
+                
+                loadingDiv.remove();
+                
+                if (!decrypted) {
+                    alert('❌ Failed to decrypt file! Incorrect password or corrupted data.');
+                    return;
+                }
+                
+                // Cache the decrypted content (this is now base64 of the original file)
+                decryptedContent.set(id, decrypted);
+                unlockedSnippets.add(id);
+                renderCodeList();
+                return;
             } catch (e) {
-                console.error('Failed to load file for decryption:', e);
+                loadingDiv.remove();
+                console.error('Failed to load/decrypt file:', e);
+                alert('❌ Failed to load encrypted file: ' + e.message);
+                return;
             }
         }
         
