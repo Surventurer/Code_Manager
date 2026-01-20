@@ -1,3 +1,9 @@
+<p align="center">
+  <img alt="JustVue logo" width="300px" src="./assets/images/logo.png">
+</p>
+
+[![Licensed under the Apache 2.0 open-source license](https://img.shields.io/badge/License-Apache%202.0-3c60b1.svg?logo=opensourceinitiative\&logoColor=white\&style=flat-square)](https://github.com/Surventurer/JustVue/blob/main/LICENSE)
+
 # JustVue
 
 JustVue is a modern, secure snippet manager designed to store your code snippets, images, and PDF documents with ease. Built with performance and security in mind, it leverages Supabase for real-time synchronization and cloud storage, ensuring your data is accessible and up-to-date across all your devices.
@@ -130,6 +136,6 @@ This will start a local server (usually at `http://localhost:8888`) that mimics 
 
 3.  **Search**: Use the search bar to filter snippets by title.
 
-## License
+## Contact
 
-This project is licensed under the [Apache-2.0 License](LICENSE).
+For any questions or concerns not addressed here, please contact me by creating issue. 
