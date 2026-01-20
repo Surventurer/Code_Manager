@@ -9,6 +9,24 @@ let decryptedContent = new Map(); // Cache decrypted content
 let autoUpdateInterval = null;
 let lastUpdateHash = null;
 
+// Dialog state - pause loading when dialog is open
+let isDialogOpen = false;
+
+// Wrapper for prompt that pauses loading
+function showPrompt(message) {
+    isDialogOpen = true;
+    const result = prompt(message);
+    isDialogOpen = false;
+    return result;
+}
+
+// Wrapper for alert that pauses loading
+function showAlert(message) {
+    isDialogOpen = true;
+    alert(message);
+    isDialogOpen = false;
+}
+
 // ===== Server-Side Encryption/Decryption Functions =====
 
 // Legacy XOR decryption for backward compatibility with old encrypted content
@@ -222,13 +240,13 @@ async function addCode() {
     const hideContent = hideContentToggle.checked;
     
     if (password === '') {
-        alert('Please enter a password!');
+        showAlert('Please enter a password!');
         passwordInput.focus();
         return;
     }
     
     if (title === '') {
-        alert('Please enter a title!');
+        showAlert('Please enter a title!');
         titleInput.focus();
         return;
     }
@@ -240,14 +258,14 @@ async function addCode() {
     if (contentType === 'text') {
         const code = codeInput.value.trim();
         if (code === '') {
-            alert('Please enter some text/code!');
+            showAlert('Please enter some text/code!');
             codeInput.focus();
             return;
         }
         content = code;
     } else if (contentType === 'image' || contentType === 'pdf') {
         if (!selectedFile) {
-            alert('Please select a file!');
+            showAlert('Please select a file!');
             return;
         }
         
@@ -255,7 +273,7 @@ async function addCode() {
         try {
             content = await readFileAsBase64(selectedFile);
         } catch (error) {
-            alert('Failed to read file!');
+            showAlert('Failed to read file!');
             return;
         }
     }
@@ -270,7 +288,7 @@ async function addCode() {
         addBtn.textContent = 'Add Snippet';
         
         if (!finalContent) {
-            alert('Failed to encrypt content!');
+            showAlert('Failed to encrypt content!');
             return;
         }
     }
@@ -310,7 +328,7 @@ async function addCode() {
         codeSnippets.unshift(savedSnippet);
         
     } catch (error) {
-        alert('⚠️ Failed to save to database. Please try again.');
+        showAlert('⚠️ Failed to save to database. Please try again.');
         addBtn.disabled = false;
         addBtn.textContent = 'Add Snippet';
         return;
@@ -349,18 +367,18 @@ async function deleteCode(id) {
     const snippet = codeSnippets.find(s => s.id == id);
     
     if (!snippet) {
-        alert('❌ Snippet not found!');
+        showAlert('❌ Snippet not found!');
         return;
     }
     
-    const enteredPassword = prompt('Enter password to delete this snippet:');
+    const enteredPassword = showPrompt('Enter password to delete this snippet:');
     
     if (enteredPassword === null) {
         return; // User cancelled
     }
     
     if (enteredPassword !== snippet.password) {
-        alert('❌ Incorrect password! Cannot delete snippet.');
+        showAlert('❌ Incorrect password! Cannot delete snippet.');
         return;
     }
     
@@ -396,7 +414,7 @@ async function deleteCode(id) {
         setTimeout(() => tempDiv.remove(), 2000);
         
     } catch (error) {
-        alert('⚠️ Failed to delete from database. Please try again.');
+        showAlert('⚠️ Failed to delete from database. Please try again.');
     }
 }
 
@@ -405,7 +423,7 @@ async function copyToClipboard(id, button) {
     const snippet = codeSnippets.find(s => s.id == id);
     
     if (!snippet) {
-        alert('❌ Snippet not found!');
+        showAlert('❌ Snippet not found!');
         return;
     }
     
@@ -419,14 +437,14 @@ async function copyToClipboard(id, button) {
             contentToCopy = decryptedContent.get(id);
         } else {
             // Need password to decrypt
-            const enteredPassword = prompt('🔒 Enter password to copy:');
+            const enteredPassword = showPrompt('🔒 Enter password to copy:');
             
             if (enteredPassword === null) {
                 return; // User cancelled
             }
             
             if (enteredPassword !== snippet.password) {
-                alert('❌ Incorrect password! Cannot copy content.');
+                showAlert('❌ Incorrect password! Cannot copy content.');
                 return;
             }
             
@@ -435,7 +453,7 @@ async function copyToClipboard(id, button) {
             const decrypted = await decryptContent(contentToCopy, enteredPassword);
             if (!decrypted) {
                 button.textContent = '📋 Copy';
-                alert('❌ Failed to decrypt content!');
+                showAlert('❌ Failed to decrypt content!');
                 return;
             }
             
@@ -454,7 +472,7 @@ async function copyToClipboard(id, button) {
             button.classList.remove('copied');
         }, 2000);
     }).catch(err => {
-        alert('Failed to copy to clipboard');
+        showAlert('Failed to copy to clipboard');
     });
 }
 
@@ -463,7 +481,7 @@ async function downloadFile(id) {
     const snippet = codeSnippets.find(s => s.id == id);
     
     if (!snippet) {
-        alert('❌ Snippet not found!');
+        showAlert('❌ Snippet not found!');
         return;
     }
     
@@ -476,14 +494,14 @@ async function downloadFile(id) {
             return;
         } else {
             // Need password to decrypt
-            const enteredPassword = prompt('🔒 Enter password to download:');
+            const enteredPassword = showPrompt('🔒 Enter password to download:');
             
             if (enteredPassword === null) {
                 return; // User cancelled
             }
             
             if (enteredPassword !== snippet.password) {
-                alert('❌ Incorrect password! Cannot download file.');
+                showAlert('❌ Incorrect password! Cannot download file.');
                 return;
             }
             
@@ -498,7 +516,7 @@ async function downloadFile(id) {
                     const response = await fetch(`/.netlify/functions/get-data?id=${id}&getContent=true`);
                     if (!response.ok) {
                         loadingDiv.remove();
-                        alert('❌ Failed to download encrypted file');
+                        showAlert('❌ Failed to download encrypted file');
                         return;
                     }
                     
@@ -507,7 +525,7 @@ async function downloadFile(id) {
                     
                     if (!rawContent) {
                         loadingDiv.remove();
-                        alert('❌ No encrypted content found');
+                        showAlert('❌ No encrypted content found');
                         return;
                     }
                     
@@ -517,7 +535,7 @@ async function downloadFile(id) {
                     loadingDiv.remove();
                     
                     if (!decrypted) {
-                        alert('❌ Failed to decrypt file!');
+                        showAlert('❌ Failed to decrypt file!');
                         return;
                     }
                     
@@ -527,7 +545,7 @@ async function downloadFile(id) {
                     return;
                 } catch (e) {
                     loadingDiv.remove();
-                    alert('❌ Failed to download file: ' + e.message);
+                    showAlert('❌ Failed to download file: ' + e.message);
                     return;
                 }
             }
@@ -536,7 +554,7 @@ async function downloadFile(id) {
             const rawContent = snippet.content || snippet.code || '';
             const decrypted = await decryptContent(rawContent, enteredPassword);
             if (!decrypted) {
-                alert('❌ Failed to decrypt file!');
+                showAlert('❌ Failed to decrypt file!');
                 return;
             }
             
@@ -567,7 +585,7 @@ async function downloadFile(id) {
                 return;
             }
         } catch (error) {
-            alert('❌ Failed to download file. Please try again.');
+            showAlert('❌ Failed to download file. Please try again.');
             return;
         }
     }
@@ -779,17 +797,25 @@ function renderCodeList() {
     }).join('');
     
     // Auto-load files that need URLs (non-encrypted files in storage)
-    autoLoadFiles();
+    if (!isDialogOpen) {
+        autoLoadFiles();
+    }
     
     // Render decrypted PDFs (convert data URLs to blob URLs)
-    renderDecryptedPDFs();
+    if (!isDialogOpen) {
+        renderDecryptedPDFs();
+    }
 }
 
 // Auto-load file URLs for non-encrypted files
 async function autoLoadFiles() {
+    if (isDialogOpen) return; // Don't load while dialog is open
+    
     const autoLoadElements = document.querySelectorAll('[data-auto-load="true"]');
     
     for (const element of autoLoadElements) {
+        if (isDialogOpen) break; // Stop if dialog opens
+        
         const snippetId = parseInt(element.dataset.snippetId, 10);
         const snippet = codeSnippets.find(s => s.id === snippetId || s.id == snippetId);
         
@@ -886,7 +912,7 @@ async function loadFileUrl(snippetId) {
         }
     } catch (error) {
         console.error('Failed to load file URL:', error);
-        alert('❌ Failed to load file. Please try again.');
+        showAlert('❌ Failed to load file. Please try again.');
         renderCodeList(); // Re-render to reset button
     }
 }
@@ -922,14 +948,14 @@ async function unlockContent(id) {
     const snippet = codeSnippets.find(s => s.id == id);
     if (!snippet) return;
     
-    const enteredPassword = prompt('🔒 Enter password to view content:');
+    const enteredPassword = showPrompt('🔒 Enter password to view content:');
     
     if (enteredPassword === null) {
         return; // User cancelled
     }
     
     if (enteredPassword !== snippet.password) {
-        alert('❌ Incorrect password! Content remains hidden.');
+        showAlert('❌ Incorrect password! Content remains hidden.');
         return;
     }
     
@@ -951,7 +977,7 @@ async function unlockContent(id) {
                 if (!response.ok) {
                     loadingDiv.remove();
                     const err = await response.json();
-                    alert('❌ Failed to download encrypted file: ' + (err.error || 'Unknown error'));
+                    showAlert('❌ Failed to download encrypted file: ' + (err.error || 'Unknown error'));
                     return;
                 }
                 
@@ -960,7 +986,7 @@ async function unlockContent(id) {
                 
                 if (!rawContent) {
                     loadingDiv.remove();
-                    alert('❌ No encrypted content found in file');
+                    showAlert('❌ No encrypted content found in file');
                     return;
                 }
                 
@@ -972,7 +998,7 @@ async function unlockContent(id) {
                 loadingDiv.remove();
                 
                 if (!decrypted) {
-                    alert('❌ Failed to decrypt file! Incorrect password or corrupted data.');
+                    showAlert('❌ Failed to decrypt file! Incorrect password or corrupted data.');
                     return;
                 }
                 
@@ -987,7 +1013,7 @@ async function unlockContent(id) {
             } catch (e) {
                 loadingDiv.remove();
                 console.error('Failed to load/decrypt file:', e);
-                alert('❌ Failed to load encrypted file: ' + e.message);
+                showAlert('❌ Failed to load encrypted file: ' + e.message);
                 return;
             }
         }
@@ -1005,7 +1031,7 @@ async function unlockContent(id) {
             loadingDiv.remove();
             
             if (!decrypted) {
-                alert('❌ Failed to decrypt! Content remains hidden.');
+                showAlert('❌ Failed to decrypt! Content remains hidden.');
                 return;
             }
             // Cache the decrypted content
@@ -1077,7 +1103,7 @@ async function saveToDatabaseJSON() {
             }
         }
     } catch (error) {
-        alert('⚠️ Failed to save data to database. Please try again.');
+        showAlert('⚠️ Failed to save data to database. Please try again.');
         throw error;
     } finally {
         isSaving = false;
@@ -1109,7 +1135,7 @@ async function loadFromDatabaseJSON() {
             }
         }
     } catch (error) {
-        alert('⚠️ Failed to load data from database. Please check your connection.');
+        showAlert('⚠️ Failed to load data from database. Please check your connection.');
     }
 }
 
