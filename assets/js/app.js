@@ -603,6 +603,9 @@ async function copyToClipboard(id, button) {
         }
     }
     
+    // Reset button text before copying (in case it shows "Decrypting...")
+    button.textContent = '📋 Copy';
+    
     // Copy to clipboard with fallback for mobile
     copyTextToClipboard(contentToCopy, button);
 }
