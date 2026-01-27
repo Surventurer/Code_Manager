@@ -614,23 +614,29 @@ async function copyToClipboard(id, button) {
 function copyTextToClipboard(text, button) {
     const originalText = button.textContent;
     
-    // Try modern clipboard API first
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(() => {
-            button.textContent = '✓ Copied!';
-            button.classList.add('copied');
-            setTimeout(() => {
-                button.textContent = originalText;
-                button.classList.remove('copied');
-            }, 2000);
-        }).catch(() => {
-            // Fallback for mobile/permission issues
+    // Ensure window has focus before clipboard operation (fixes Firefox after dialogs)
+    window.focus();
+    
+    // Use a small delay to ensure focus is restored after dialogs (needed for Firefox)
+    setTimeout(() => {
+        // Try modern clipboard API first
+        if (navigator.clipboard && navigator.clipboard.writeText && document.hasFocus()) {
+            navigator.clipboard.writeText(text).then(() => {
+                button.textContent = '✓ Copied!';
+                button.classList.add('copied');
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.classList.remove('copied');
+                }, 2000);
+            }).catch(() => {
+                // Fallback for mobile/permission issues (Firefox often needs this)
+                fallbackCopyToClipboard(text, button, originalText);
+            });
+        } else {
+            // Fallback for older browsers or when document doesn't have focus
             fallbackCopyToClipboard(text, button, originalText);
-        });
-    } else {
-        // Fallback for older browsers
-        fallbackCopyToClipboard(text, button, originalText);
-    }
+        }
+    }, 10);
 }
 
 // Fallback copy method using textarea (works on mobile)
